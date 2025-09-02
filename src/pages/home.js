@@ -1,9 +1,85 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Grid, Button, Container, Card, CardContent, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, Paper, Grid, Button, Container, Card, CardContent, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import { Link } from 'react-router-dom';
 import PeopleIcon from '@mui/icons-material/People';
-// 1. We import the function to get the book list from your services
-import { getBookList } from '../services/UserServices';
+import { getBookList, addBook } from '../services/UserServices';
+
+// This is the new pop-up modal form for adding a book
+const AddBookModal = ({ open, onClose, onBookAdded }) => {
+    const [formData, setFormData] = useState({
+        title: '',
+        author: '',
+        published_date: ''
+    });
+    const [formError, setFormError] = useState('');
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setFormError('');
+        try {
+            const newBook = await addBook(formData);
+            onBookAdded(newBook); // Pass the new book back to the parent
+            onClose(); // Close the modal
+        } catch (error) {
+            setFormError('Failed to add book. Please check the details and try again.');
+            console.error(error);
+        }
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+            <DialogTitle>Add a New Book</DialogTitle>
+            <DialogContent>
+                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        name="title"
+                        label="Book Title"
+                        type="text"
+                        fullWidth
+                        variant="outlined"
+                        value={formData.title}
+                        onChange={handleChange}
+                        required
+                    />
+                    <TextField
+                        margin="dense"
+                        name="author"
+                        label="Author"
+                        type="text"
+                        fullWidth
+                        variant="outlined"
+                        value={formData.author}
+                        onChange={handleChange}
+                        required
+                    />
+                    <TextField
+                        margin="dense"
+                        name="published_date"
+                        label="Published Date"
+                        type="date"
+                        fullWidth
+                        variant="outlined"
+                        value={formData.published_date}
+                        onChange={handleChange}
+                        InputLabelProps={{ shrink: true }}
+                        required
+                    />
+                    {formError && <Alert severity="error" sx={{ mt: 2 }}>{formError}</Alert>}
+                </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: '16px 24px' }}>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button type="submit" variant="contained" onClick={handleSubmit}>Save Book</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
 
 // This is your original welcome page, now wrapped in its own component
 const WelcomeView = () => (
@@ -63,10 +139,7 @@ const BookCard = ({ book }) => (
                     by {book.author}
                 </Typography>
                 <Typography variant="body2">
-                    <strong>Genre:</strong> {book.genre}
-                </Typography>
-                <Typography variant="body2">
-                    <strong>Published:</strong> {book.publication_year}
+                    <strong>Published:</strong> {book.published_date}
                 </Typography>
             </CardContent>
         </Card>
@@ -78,6 +151,12 @@ const BookListView = () => {
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // This function will be called from the modal to update the book list
+    const handleBookAdded = (newBook) => {
+        setBooks(prevBooks => [newBook, ...prevBooks]); // Add new book to the top of the list
+    };
 
     useEffect(() => {
         const fetchBooks = async () => {
@@ -103,14 +182,25 @@ const BookListView = () => {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 5 }}>
-            <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                Our Book Collection
-            </Typography>
-            <Grid container spacing={4} sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    My Book Collection
+                </Typography>
+                <Button variant="contained" onClick={() => setIsModalOpen(true)}>
+                    Add New Book
+                </Button>
+            </Box>
+            <Grid container spacing={4}>
                 {books.map((book) => (
                     <BookCard key={book.id} book={book} />
                 ))}
             </Grid>
+            {/* The Modal component is rendered here but is only visible when isModalOpen is true */}
+            <AddBookModal
+                open={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onBookAdded={handleBookAdded}
+            />
         </Container>
     );
 };
@@ -120,12 +210,10 @@ const Home = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
-        // 2. Check for a token to determine login status
         const token = localStorage.getItem('access_token');
-        setIsLoggedIn(!!token); // '!!' converts the token string (or null) to a boolean
-    }, []); // The empty array [] means this effect runs only once when the component mounts
+        setIsLoggedIn(!!token);
+    }, []);
 
-    // 3. Conditionally render the correct view
     return isLoggedIn ? <BookListView /> : <WelcomeView />;
 };
 

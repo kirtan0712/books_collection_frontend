@@ -11,4 +11,5 @@ export const API_ENDPOINTS = {
     LOGOUT: `${BASE_URL}/api/users/logout/`,
     PROFILE: `${BASE_URL}/api/users/profile/`,
     BookList: `${BASE_URL}/api/books/list/`,
+    TOKEN_REFRESH: `${BASE_URL}/api/users/token/refresh/`,    
 };

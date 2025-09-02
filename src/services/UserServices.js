@@ -60,3 +60,16 @@ export const getBookList = async () => {
         throw error.response.data;
     }
 };
+
+// Function to create a new book
+export const addBook = async (bookData) => {
+    try {
+        const response = await axios.post(API_ENDPOINTS.BookList, bookData, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    } catch (error) {
+        // We throw the whole error object to get more details in the component
+        throw error;
+    }
+};
